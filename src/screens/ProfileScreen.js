@@ -22,8 +22,9 @@ const ProfileScreen = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const navigation = useNavigation();
-  const { user, logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
 
   const handleLogout = () => {
     Alert.alert("Sair da Conta", "Tem certeza que deseja sair da sua conta?", [
@@ -33,14 +34,13 @@ const ProfileScreen = () => {
         style: "destructive",
         onPress: () => {
           logout();
-          navigation.navigate("Login");
         },
       },
     ]);
   };
 
   const handleEditProfile = () => {
-    Alert.alert("Editar Perfil", "Funcionalidade em desenvolvimento");
+    navigation.navigate("EditProfile");
   };
 
   const handleChangePassword = () => {
@@ -55,6 +55,41 @@ const ProfileScreen = () => {
     Alert.alert(
       "Sobre o App",
       "MedInventory v1.0.0\nSistema de Gestão de Ativos Médicos"
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Excluir Conta",
+      "Essa ação é permanente. Deseja realmente excluir sua conta?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setDeleting(true);
+              const result = await deleteAccount();
+              if (!result.success) {
+                Alert.alert(
+                  "Erro",
+                  result.error || "Não foi possível excluir a conta"
+                );
+              } else {
+                Alert.alert(
+                  "Conta excluída",
+                  "Sua conta foi removida com sucesso."
+                );
+              }
+            } catch (error) {
+              Alert.alert("Erro", "Não foi possível excluir a conta");
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
     );
   };
 
@@ -182,13 +217,15 @@ const ProfileScreen = () => {
                   />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.userName}>
-                {user?.name || "Dr. João Silva"}
-              </Text>
+            <Text style={styles.userName}>
+              {user?.nome || user?.name || "Usuário"}
+            </Text>
               <Text style={styles.userEmail}>
                 {user?.email || "joao.silva@hospital.com"}
               </Text>
-              <Text style={styles.userRole}>Administrador do Sistema</Text>
+            <Text style={styles.userRole}>
+              {user?.tipo || "Administrador do Sistema"}
+            </Text>
             </View>
           </LinearGradient>
         </View>
@@ -228,6 +265,20 @@ const ProfileScreen = () => {
               color={theme.colors.error}
             />
             <Text style={styles.logoutButtonText}>Sair da Conta</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.deleteButton, deleting && styles.deleteButtonDisabled]}
+            onPress={handleDeleteAccount}
+            disabled={deleting}
+          >
+            <Ionicons
+              name="trash-outline"
+              size={20}
+              color={theme.colors.white}
+            />
+            <Text style={styles.deleteButtonText}>
+              {deleting ? "Excluindo..." : "Excluir Conta"}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -404,6 +455,25 @@ const styles = StyleSheet.create({
     color: theme.colors.error,
     fontWeight: theme.typography.fontWeight.medium,
     marginLeft: theme.spacing.sm,
+  },
+  deleteButton: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: theme.colors.error,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    marginTop: theme.spacing.sm,
+    ...theme.shadows.sm,
+  },
+  deleteButtonText: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.white,
+    fontWeight: theme.typography.fontWeight.semibold,
+    marginLeft: theme.spacing.sm,
+  },
+  deleteButtonDisabled: {
+    opacity: 0.6,
   },
   versionContainer: {
     alignItems: "center",

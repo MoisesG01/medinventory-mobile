@@ -19,7 +19,7 @@ const { width } = Dimensions.get("window");
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
@@ -30,17 +30,16 @@ const LoginPage = () => {
   };
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!identifier || !password) {
       Alert.alert("Erro", "Por favor, preencha todos os campos");
       return;
     }
 
     setLoading(true);
     try {
-      const result = await login(email, password);
+      const result = await login(identifier.trim(), password);
       if (result.success) {
         Alert.alert("Sucesso", "Login realizado com sucesso!");
-        navigation.navigate("Home");
       } else {
         Alert.alert("Erro", result.error || "Erro ao fazer login");
       }
@@ -107,7 +106,7 @@ const LoginPage = () => {
           <Text style={styles.sectionTitle}>Log in</Text>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>Usuário ou Email</Text>
             <View style={styles.inputWithIcon}>
               <Ionicons
                 name="mail-outline"
@@ -117,12 +116,13 @@ const LoginPage = () => {
               />
               <TextInput
                 style={styles.input}
-                placeholder="Enter your email"
+                placeholder="Digite seu usuário ou email"
                 placeholderTextColor="#ccc"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
+                value={identifier}
+                onChangeText={setIdentifier}
+                keyboardType="default"
                 autoCapitalize="none"
+                autoCorrect={false}
               />
             </View>
           </View>

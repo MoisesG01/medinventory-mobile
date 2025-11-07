@@ -1,6 +1,48 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import { authApi, clearAuthToken, setAuthToken } from "../services/api";
 
 const AuthContext = createContext();
+
+const TOKEN_STORAGE_KEY = "@MedInventoryApp:access_token";
+
+const normalizeUser = (apiUser) => {
+  if (!apiUser) return null;
+
+  const fallbackName =
+    apiUser.fullName ||
+    apiUser.username ||
+    (typeof apiUser.email === "string"
+      ? apiUser.email.split("@")[0]
+      : undefined);
+
+  return {
+    ...apiUser,
+    name: apiUser.name || fallbackName || "",
+  };
+};
+
+const extractErrorMessage = (error) => {
+  const possibleMessage =
+    error?.message || error?.data?.message || error?.data?.error || error?.data;
+
+  if (Array.isArray(possibleMessage)) {
+    return possibleMessage.join("\n");
+  }
+
+  if (typeof possibleMessage === "string") {
+    return possibleMessage;
+  }
+
+  return "Ocorreu um erro. Tente novamente.";
+};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -12,147 +54,190 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  // Simular banco de dados de usuários
-  const [users, setUsers] = useState([
-    {
-      id: "1",
-      email: "admin@medinventory.com",
-      password: "123456",
-      firstName: "João",
-      lastName: "Silva",
-      hospital: "Hospital Central",
-      role: "Administrador",
-      name: "João Silva",
-    },
-    {
-      id: "2",
-      email: "enfermeiro@medinventory.com",
-      password: "123456",
-      firstName: "Maria",
-      lastName: "Santos",
-      hospital: "Hospital Central",
-      role: "Enfermeiro",
-      name: "Maria Santos",
-    },
-  ]);
+  const [token, setToken] = useState(null);
+  const [initializing, setInitializing] = useState(true);
+  const [authenticating, setAuthenticating] = useState(false);
 
   useEffect(() => {
-    // Simular verificação de autenticação
-    const checkAuth = async () => {
+    const loadStoredSession = async () => {
       try {
-        // Simular delay de verificação
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        // Por enquanto, vamos simular que não há usuário logado
-        setUser(null);
+        const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+        if (!storedToken) {
+          return;
+        }
+
+        setAuthToken(storedToken);
+        setToken(storedToken);
+
+        try {
+          const profile = normalizeUser(await authApi.me());
+          if (profile) {
+            setUser(profile);
+          } else {
+            await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
+            clearAuthToken();
+            setToken(null);
+          }
+        } catch (error) {
+          await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
+          clearAuthToken();
+          setToken(null);
+        }
       } catch (error) {
-        console.error("Auth check error:", error);
-        setUser(null);
+        console.error("Erro ao carregar sessão armazenada:", error);
       } finally {
-        setLoading(false);
+        setInitializing(false);
       }
     };
 
-    checkAuth();
+    loadStoredSession();
   }, []);
 
-  const login = async (email, password) => {
+  const handleLogin = async (identifier, password) => {
+    setAuthenticating(true);
     try {
-      setLoading(true);
+      const response = await authApi.login({
+        username: identifier?.trim(),
+        password,
+      });
 
-      // Simular delay de rede
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const accessToken = response?.access_token;
+      const userData = normalizeUser(response?.user);
 
-      // Validar credenciais
-      const foundUser = users.find(
-        (u) => u.email === email && u.password === password
-      );
+      if (!accessToken || !userData) {
+        throw new Error("Resposta de autenticação inválida");
+      }
 
-      if (foundUser) {
-        const userData = {
-          id: foundUser.id,
-          email: foundUser.email,
-          name: foundUser.name,
-          firstName: foundUser.firstName,
-          lastName: foundUser.lastName,
-          hospital: foundUser.hospital,
-          role: foundUser.role,
-        };
-        setUser(userData);
-        return { success: true, user: userData };
+      setAuthToken(accessToken);
+      setToken(accessToken);
+      setUser(userData);
+
+      await AsyncStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
+
+      return { success: true, user: userData };
+    } catch (error) {
+      console.error("Erro ao fazer login:", error);
+
+      return {
+        success: false,
+        error:
+          extractErrorMessage(error) ||
+          "Não foi possível realizar o login. Verifique suas credenciais.",
+      };
+    } finally {
+      setAuthenticating(false);
+    }
+  };
+
+  const handleSignup = async (payload) => {
+    setAuthenticating(true);
+    try {
+      const response = await authApi.register({
+        nome: payload.nome?.trim(),
+        username: payload.username?.trim(),
+        email: payload.email,
+        password: payload.password,
+        tipo: payload.tipo ?? "UsuarioComum",
+      });
+      const userData = normalizeUser(response?.user);
+
+      return { success: true, user: userData };
+    } catch (error) {
+      console.error("Erro ao criar conta:", error);
+
+      return {
+        success: false,
+        error:
+          extractErrorMessage(error) ||
+          "Não foi possível criar a conta. Tente novamente.",
+      };
+    } finally {
+      setAuthenticating(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
+    } catch (error) {
+      console.error("Erro ao limpar token armazenado:", error);
+    } finally {
+      clearAuthToken();
+      setToken(null);
+      setUser(null);
+    }
+  };
+
+  const handleUpdateProfile = async (updates) => {
+    setAuthenticating(true);
+    try {
+      if (!user?.id) {
+        throw new Error("Usuário não identificado para atualização");
+      }
+
+      const response = await authApi.updateUser(user.id, updates);
+      const updatedUserData = normalizeUser(response?.user ?? response);
+
+      if (updatedUserData) {
+        setUser((prev) => ({
+          ...prev,
+          ...updatedUserData,
+        }));
       } else {
-        return { success: false, error: "Email ou senha incorretos" };
+        const refreshed = normalizeUser(await authApi.me());
+        setUser(refreshed);
       }
+
+      return { success: true, user: updatedUserData };
     } catch (error) {
-      console.error("Login error:", error);
-      return { success: false, error: "Erro ao fazer login" };
+      console.error("Erro ao atualizar perfil:", error);
+      return {
+        success: false,
+        error:
+          extractErrorMessage(error) || "Não foi possível atualizar o perfil.",
+      };
     } finally {
-      setLoading(false);
+      setAuthenticating(false);
     }
   };
 
-  const signup = async (userData) => {
+  const handleDeleteAccount = async () => {
+    if (!user?.id) {
+      return { success: false, error: "Usuário não encontrado." };
+    }
+
+    setAuthenticating(true);
     try {
-      setLoading(true);
-
-      // Simular delay de rede
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Verificar se email já existe
-      const existingUser = users.find((u) => u.email === userData.email);
-      if (existingUser) {
-        return { success: false, error: "Este email já está em uso" };
-      }
-
-      // Criar novo usuário
-      const newUser = {
-        id: (users.length + 1).toString(),
-        email: userData.email,
-        password: userData.password,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        hospital: userData.hospital,
-        role: userData.role,
-        name: `${userData.firstName} ${userData.lastName}`,
-      };
-
-      // Adicionar ao "banco de dados"
-      setUsers((prev) => [...prev, newUser]);
-
-      // Fazer login automático
-      const userDataForLogin = {
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        hospital: newUser.hospital,
-        role: newUser.role,
-      };
-
-      setUser(userDataForLogin);
-      return { success: true, user: userDataForLogin };
+      await authApi.deleteUser(user.id);
+      await handleLogout();
+      return { success: true };
     } catch (error) {
-      console.error("Signup error:", error);
-      return { success: false, error: "Erro ao criar conta" };
+      console.error("Erro ao excluir conta:", error);
+      return {
+        success: false,
+        error:
+          extractErrorMessage(error) || "Não foi possível excluir a conta.",
+      };
     } finally {
-      setLoading(false);
+      setAuthenticating(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-  };
-
-  const value = {
-    user,
-    loading,
-    login,
-    signup,
-    logout,
-    isAuthenticated: !!user,
-  };
+  const value = useMemo(
+    () => ({
+      user,
+      token,
+      initializing,
+      authenticating,
+      login: handleLogin,
+      signup: handleSignup,
+      logout: handleLogout,
+      updateProfile: handleUpdateProfile,
+      deleteAccount: handleDeleteAccount,
+      isAuthenticated: Boolean(user && token),
+    }),
+    [user, token, initializing, authenticating]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

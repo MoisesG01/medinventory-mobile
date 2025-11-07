@@ -18,10 +18,9 @@ const { width } = Dimensions.get("window");
 
 const SignupPage = () => {
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    nome: "",
+    username: "",
     email: "",
-    contactNumber: "",
     password: "",
     confirmPassword: "",
   });
@@ -73,22 +72,67 @@ const SignupPage = () => {
       return;
     }
 
-    if (
-      !formData.firstName ||
-      !formData.lastName ||
-      !formData.email ||
-      !formData.contactNumber
-    ) {
-      Alert.alert("Erro", "Por favor, preencha todos os campos obrigatórios");
+    const normalizedUsername = formData.username.trim();
+    const normalizedName = formData.nome.trim();
+
+    if (!normalizedName) {
+      Alert.alert("Erro", "Informe o nome completo");
+      return;
+    }
+
+    if (normalizedName.length < 2) {
+      Alert.alert("Erro", "Nome deve ter pelo menos 2 caracteres.");
+      return;
+    }
+
+    if (normalizedName.length > 100) {
+      Alert.alert("Erro", "Nome deve ter no máximo 100 caracteres.");
+      return;
+    }
+
+    if (!normalizedUsername || !formData.email.trim()) {
+      Alert.alert("Erro", "Preencha nome de usuário e email");
+      return;
+    }
+
+    if (normalizedUsername.length < 3) {
+      Alert.alert("Erro", "Nome de usuário deve ter pelo menos 3 caracteres.");
+      return;
+    }
+
+    if (normalizedUsername.length > 30) {
+      Alert.alert("Erro", "Nome de usuário deve ter no máximo 30 caracteres.");
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9._-]+$/.test(normalizedUsername)) {
+      Alert.alert(
+        "Erro",
+        "Use apenas letras, números, ponto, traço e sublinhado no nome de usuário."
+      );
       return;
     }
 
     setLoading(true);
     try {
-      const result = await signup(formData);
+      const result = await signup({
+        nome: normalizedName,
+        username: normalizedUsername,
+        email: formData.email.trim(),
+        password: formData.password,
+        tipo: "UsuarioComum",
+      });
       if (result.success) {
-        Alert.alert("Sucesso", "Conta criada com sucesso!");
-        navigation.navigate("Home");
+        Alert.alert("Sucesso", "Conta criada com sucesso!", [
+          {
+            text: "OK",
+            onPress: () =>
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "Login" }],
+              }),
+          },
+        ]);
       } else {
         Alert.alert("Erro", result.error || "Erro ao criar conta");
       }
@@ -148,24 +192,26 @@ const SignupPage = () => {
 
         <View style={styles.signupFields}>
           <View style={styles.signupField}>
-            <Text style={styles.label}>First Name*</Text>
+            <Text style={styles.label}>Full Name*</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter your first name"
+              placeholder="Enter your full name"
               placeholderTextColor="#ccc"
-              value={formData.firstName}
-              onChangeText={(value) => handleInputChange("firstName", value)}
+              value={formData.nome}
+              onChangeText={(value) => handleInputChange("nome", value)}
             />
           </View>
 
           <View style={styles.signupField}>
-            <Text style={styles.label}>Last Name*</Text>
+            <Text style={styles.label}>Username*</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter your last name"
+              placeholder="Choose a username"
               placeholderTextColor="#ccc"
-              value={formData.lastName}
-              onChangeText={(value) => handleInputChange("lastName", value)}
+              value={formData.username}
+              onChangeText={(value) => handleInputChange("username", value)}
+              autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
 
@@ -179,20 +225,6 @@ const SignupPage = () => {
               onChangeText={(value) => handleInputChange("email", value)}
               keyboardType="email-address"
               autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.signupField}>
-            <Text style={styles.label}>Contact Number*</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your contact number"
-              placeholderTextColor="#ccc"
-              value={formData.contactNumber}
-              onChangeText={(value) =>
-                handleInputChange("contactNumber", value)
-              }
-              keyboardType="phone-pad"
             />
           </View>
 
