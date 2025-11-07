@@ -21,7 +21,7 @@ import theme from "../styles/theme";
 const { width, height } = Dimensions.get("window");
 
 const LoginScreen = () => {
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -29,17 +29,16 @@ const LoginScreen = () => {
   const { login } = useAuth();
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!identifier || !password) {
       Alert.alert("Erro", "Por favor, preencha todos os campos");
       return;
     }
 
     setLoading(true);
     try {
-      const result = await login(email, password);
+      const result = await login(identifier.trim(), password);
       if (result.success) {
         Alert.alert("Sucesso", "Login realizado com sucesso!");
-        navigation.navigate("MainTabs");
       } else {
         Alert.alert("Erro", result.error || "Erro ao fazer login");
       }
@@ -92,7 +91,7 @@ const LoginScreen = () => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Email</Text>
+              <Text style={styles.inputLabel}>Usuário ou Email</Text>
               <View style={styles.inputWrapper}>
                 <Ionicons
                   name="mail-outline"
@@ -102,13 +101,13 @@ const LoginScreen = () => {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="Digite seu email"
+                  placeholder="Digite seu usuário ou email"
                   placeholderTextColor={theme.colors.textSecondary}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
+                  value={identifier}
+                  onChangeText={setIdentifier}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  keyboardType="default"
                 />
               </View>
             </View>

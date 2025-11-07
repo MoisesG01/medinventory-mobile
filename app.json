@@ -20,10 +20,20 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.medinventory.app",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "apiUrlMobile": "http://10.0.2.2:3000",
+      "apiUrlWeb": "http://localhost:3000",
+      "apiUrl": "http://localhost:3000",
+      "eas": {
+        "projectId": "53929fa2-898f-4daf-b159-76bf1c7556c8"
+      }
     }
   }
 }

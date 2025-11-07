@@ -22,15 +22,11 @@ const { width, height } = Dimensions.get("window");
 
 const SignupScreen = () => {
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    nome: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
-    hospital: "",
-    role: "",
-    phone: "",
-    department: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -40,27 +36,6 @@ const SignupScreen = () => {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const navigation = useNavigation();
   const { signup } = useAuth();
-
-  const formatPhone = (value) => {
-    // Remove todos os caracteres não numéricos
-    const numbers = value.replace(/\D/g, "");
-
-    // Aplica a máscara (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
-    if (numbers.length <= 2) {
-      return numbers;
-    } else if (numbers.length <= 6) {
-      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
-    } else if (numbers.length <= 10) {
-      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(
-        6
-      )}`;
-    } else {
-      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(
-        7,
-        11
-      )}`;
-    }
-  };
 
   const calculatePasswordStrength = (password) => {
     let strength = 0;
@@ -92,19 +67,12 @@ const SignupScreen = () => {
   const handleInputChange = (field, value) => {
     let processedValue = value;
 
-    // Formatar telefone
-    if (field === "phone") {
-      processedValue = formatPhone(value);
-    }
-
-    // Calcular força da senha
     if (field === "password") {
       setPasswordStrength(calculatePasswordStrength(value));
     }
 
     setFormData((prev) => ({ ...prev, [field]: processedValue }));
 
-    // Limpar erro quando usuário começar a digitar
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
@@ -112,10 +80,25 @@ const SignupScreen = () => {
 
   const validateField = (field, value) => {
     switch (field) {
-      case "firstName":
-        return value.trim() ? "" : "Nome é obrigatório";
-      case "lastName":
-        return value.trim() ? "" : "Sobrenome é obrigatório";
+      case "nome": {
+        const trimmed = value.trim();
+        if (!trimmed) return "Nome é obrigatório";
+        if (trimmed.length < 2) return "Nome deve ter pelo menos 2 caracteres";
+        if (trimmed.length > 100)
+          return "Nome deve ter no máximo 100 caracteres";
+        return "";
+      }
+      case "username": {
+        const normalizedValue = value.trim();
+        if (!normalizedValue) return "Nome de usuário é obrigatório";
+        if (normalizedValue.length < 3)
+          return "Nome de usuário deve ter pelo menos 3 caracteres";
+        if (normalizedValue.length > 30)
+          return "Nome de usuário deve ter no máximo 30 caracteres";
+        if (!/^[a-zA-Z0-9._-]+$/.test(normalizedValue))
+          return "Utilize apenas letras, números, ponto, traço e sublinhado";
+        return "";
+      }
       case "email":
         if (!value.trim()) return "Email é obrigatório";
         if (!value.includes("@")) return "Email inválido";
@@ -135,16 +118,6 @@ const SignupScreen = () => {
         if (!value) return "Confirmação de senha é obrigatória";
         if (value !== formData.password) return "Senhas não coincidem";
         return "";
-      case "hospital":
-        return value.trim() ? "" : "Hospital/Instituição é obrigatório";
-      case "role":
-        return value.trim() ? "" : "Cargo/Função é obrigatório";
-      case "phone":
-        if (value && !/^\(\d{2}\)\s\d{4,5}-\d{4}$/.test(value))
-          return "Telefone inválido (formato: (XX) XXXXX-XXXX)";
-        return "";
-      case "department":
-        return value.trim() ? "" : "Departamento é obrigatório";
       default:
         return "";
     }
@@ -176,12 +149,21 @@ const SignupScreen = () => {
 
     setLoading(true);
     try {
-      const result = await signup(formData);
+      const result = await signup({
+        nome: formData.nome.trim(),
+        username: formData.username.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+      });
       if (result.success) {
         Alert.alert("Sucesso", "Conta criada com sucesso!", [
           {
             text: "OK",
-            onPress: () => navigation.navigate("MainTabs"),
+            onPress: () =>
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "Login" }],
+              }),
           },
         ]);
       } else {
@@ -193,15 +175,6 @@ const SignupScreen = () => {
       setLoading(false);
     }
   };
-
-  const roleOptions = [
-    "Administrador",
-    "Enfermeiro",
-    "Médico",
-    "Técnico",
-    "Gerente",
-    "Supervisor",
-  ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -246,60 +219,68 @@ const SignupScreen = () => {
               </Text>
             </View>
 
-            {/* Nome e Sobrenome */}
-            <View style={styles.rowContainer}>
+            {/* Nome completo */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Nome completo</Text>
+              <View
+                style={[styles.inputWrapper, errors.nome && styles.inputError]}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color={
+                    errors.nome
+                      ? theme.colors.error
+                      : theme.colors.textSecondary
+                  }
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Digite seu nome completo"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={formData.nome}
+                  onChangeText={(value) => handleInputChange("nome", value)}
+                  autoCapitalize="words"
+                />
+              </View>
+              {errors.nome && (
+                <Text style={styles.errorText}>{errors.nome}</Text>
+              )}
+            </View>
+
+            {/* Nome de Usuário */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Nome de Usuário</Text>
               <View
                 style={[
-                  styles.inputContainer,
-                  { flex: 1, marginRight: theme.spacing.sm },
+                  styles.inputWrapper,
+                  errors.username && styles.inputError,
                 ]}
               >
-                <Text style={styles.inputLabel}>Nome</Text>
-                <View style={styles.inputWrapper}>
-                  <Ionicons
-                    name="person-outline"
-                    size={20}
-                    color={theme.colors.textSecondary}
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Nome"
-                    placeholderTextColor={theme.colors.textSecondary}
-                    value={formData.firstName}
-                    onChangeText={(value) =>
-                      handleInputChange("firstName", value)
-                    }
-                    autoCapitalize="words"
-                  />
-                </View>
+                <Ionicons
+                  name="at-outline"
+                  size={20}
+                  color={
+                    errors.username
+                      ? theme.colors.error
+                      : theme.colors.textSecondary
+                  }
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Escolha um nome de usuário"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={formData.username}
+                  onChangeText={(value) => handleInputChange("username", value)}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
               </View>
-              <View
-                style={[
-                  styles.inputContainer,
-                  { flex: 1, marginLeft: theme.spacing.sm },
-                ]}
-              >
-                <Text style={styles.inputLabel}>Sobrenome</Text>
-                <View style={styles.inputWrapper}>
-                  <Ionicons
-                    name="person-outline"
-                    size={20}
-                    color={theme.colors.textSecondary}
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Sobrenome"
-                    placeholderTextColor={theme.colors.textSecondary}
-                    value={formData.lastName}
-                    onChangeText={(value) =>
-                      handleInputChange("lastName", value)
-                    }
-                    autoCapitalize="words"
-                  />
-                </View>
-              </View>
+              {errors.username && (
+                <Text style={styles.errorText}>{errors.username}</Text>
+              )}
             </View>
 
             {/* Email */}
@@ -440,136 +421,6 @@ const SignupScreen = () => {
               </View>
               {errors.confirmPassword && (
                 <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-              )}
-            </View>
-
-            {/* Hospital */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Hospital/Instituição</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons
-                  name="business-outline"
-                  size={20}
-                  color={theme.colors.textSecondary}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nome do hospital ou instituição"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  value={formData.hospital}
-                  onChangeText={(value) => handleInputChange("hospital", value)}
-                  autoCapitalize="words"
-                />
-              </View>
-            </View>
-
-            {/* Cargo e Departamento */}
-            <View style={styles.rowContainer}>
-              <View
-                style={[
-                  styles.inputContainer,
-                  { flex: 1, marginRight: theme.spacing.sm },
-                ]}
-              >
-                <Text style={styles.inputLabel}>Cargo/Função</Text>
-                <View
-                  style={[
-                    styles.inputWrapper,
-                    errors.role && styles.inputError,
-                  ]}
-                >
-                  <Ionicons
-                    name="briefcase-outline"
-                    size={20}
-                    color={
-                      errors.role
-                        ? theme.colors.error
-                        : theme.colors.textSecondary
-                    }
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Seu cargo"
-                    placeholderTextColor={theme.colors.textSecondary}
-                    value={formData.role}
-                    onChangeText={(value) => handleInputChange("role", value)}
-                    autoCapitalize="words"
-                  />
-                </View>
-                {errors.role && (
-                  <Text style={styles.errorText}>{errors.role}</Text>
-                )}
-              </View>
-              <View
-                style={[
-                  styles.inputContainer,
-                  { flex: 1, marginLeft: theme.spacing.sm },
-                ]}
-              >
-                <Text style={styles.inputLabel}>Departamento</Text>
-                <View
-                  style={[
-                    styles.inputWrapper,
-                    errors.department && styles.inputError,
-                  ]}
-                >
-                  <Ionicons
-                    name="business-outline"
-                    size={20}
-                    color={
-                      errors.department
-                        ? theme.colors.error
-                        : theme.colors.textSecondary
-                    }
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Departamento"
-                    placeholderTextColor={theme.colors.textSecondary}
-                    value={formData.department}
-                    onChangeText={(value) =>
-                      handleInputChange("department", value)
-                    }
-                    autoCapitalize="words"
-                  />
-                </View>
-                {errors.department && (
-                  <Text style={styles.errorText}>{errors.department}</Text>
-                )}
-              </View>
-            </View>
-
-            {/* Telefone */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Telefone (Opcional)</Text>
-              <View
-                style={[styles.inputWrapper, errors.phone && styles.inputError]}
-              >
-                <Ionicons
-                  name="call-outline"
-                  size={20}
-                  color={
-                    errors.phone
-                      ? theme.colors.error
-                      : theme.colors.textSecondary
-                  }
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="(XX) XXXXX-XXXX"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  value={formData.phone}
-                  onChangeText={(value) => handleInputChange("phone", value)}
-                  keyboardType="phone-pad"
-                  maxLength={15}
-                />
-              </View>
-              {errors.phone && (
-                <Text style={styles.errorText}>{errors.phone}</Text>
               )}
             </View>
 
