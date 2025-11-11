@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -268,13 +269,46 @@ const EquipmentsListScreen = () => {
   );
 
   const renderHeader = () => (
-    <View style={styles.header}>
-      <Text style={styles.headerTitle}>Equipamentos</Text>
-      <Text style={styles.headerSubtitle}>
-        Você possui {totalEquipments} equipamentos cadastrados
-      </Text>
+    <View style={styles.headerWrapper}>
+      <View style={styles.hero}>
+        <View style={styles.heroTop}>
+          <View style={styles.heroText}>
+            <Text style={styles.heroTitle}>Equipamentos</Text>
+            <Text style={styles.heroSubtitle}>
+              Gerencie e monitore o parque tecnológico do hospital em tempo real.
+            </Text>
+          </View>
+          <View style={styles.heroCountBadge}>
+            <Ionicons
+              name="medkit-outline"
+              size={20}
+              color={theme.colors.primary}
+            />
+            <Text style={styles.heroCount}>{totalEquipments}</Text>
+            <Text style={styles.heroCountLabel}>cadastrados</Text>
+          </View>
+        </View>
+      </View>
 
-      <View style={styles.filtersContainer}>
+      <View style={styles.filtersCard}>
+        <View style={styles.filtersHeader}>
+          <Text style={styles.filtersTitle}>Filtros e buscas</Text>
+          {statusFiltersActive && (
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={handleClearFilters}
+            >
+              <Ionicons
+                name="refresh-outline"
+                size={16}
+                color={theme.colors.primary}
+                style={{ marginRight: theme.spacing.xs }}
+              />
+              <Text style={styles.clearButtonText}>Limpar</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         <View style={styles.searchRow}>
           <View style={styles.searchInputWrapper}>
             <Ionicons
@@ -299,24 +333,15 @@ const EquipmentsListScreen = () => {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.statusChipsRow}>
-          {STATUS_OPTIONS.map(renderStatusOption)}
-        </View>
-
-        {statusFiltersActive && (
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={handleClearFilters}
+        <View style={styles.statusChipContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.statusChipsRow}
           >
-            <Ionicons
-              name="refresh-outline"
-              size={16}
-              color={theme.colors.primary}
-              style={{ marginRight: theme.spacing.xs }}
-            />
-            <Text style={styles.clearButtonText}>Limpar filtros</Text>
-          </TouchableOpacity>
-        )}
+            {STATUS_OPTIONS.map(renderStatusOption)}
+          </ScrollView>
+        </View>
       </View>
     </View>
   );
@@ -366,18 +391,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  headerContainer: {
+  headerWrapper: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    gap: theme.spacing.md,
+    paddingTop: theme.spacing.lg,
+    gap: theme.spacing.lg,
   },
   hero: {
+    width: "100%",
     borderRadius: theme.borderRadius.xxl,
     paddingVertical: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
     ...theme.shadows.md,
   },
-  heroContent: {
+  heroTop: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -397,63 +423,42 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.85)",
     lineHeight: 20,
   },
-  heroBadge: {
-    flexDirection: "row",
+  heroCountBadge: {
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: theme.colors.white,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.borderRadius.full,
-    gap: theme.spacing.xs,
-  },
-  heroBadgeText: {
-    color: theme.colors.primary,
-    fontWeight: theme.typography.fontWeight.medium,
-  },
-  heroStats: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: theme.spacing.lg,
-    gap: theme.spacing.sm,
-  },
-  heroStatCard: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.18)",
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    gap: theme.spacing.sm,
+    borderRadius: theme.borderRadius.xl,
+    minWidth: 120,
+    gap: 2,
   },
-  heroStatText: {
-    flex: 1,
+  heroCount: {
+    fontSize: theme.typography.fontSize.xxl,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary,
   },
-  heroStatLabel: {
-    color: "rgba(255,255,255,0.85)",
+  heroCountLabel: {
     fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  heroStatValue: {
-    color: theme.colors.white,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.typography.fontWeight.semibold,
-  },
-  filterCard: {
+  filtersCard: {
+    width: "100%",
     backgroundColor: theme.colors.white,
     borderRadius: theme.borderRadius.xxl,
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.xl,
-    paddingBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
+    gap: theme.spacing.md,
     ...theme.shadows.md,
   },
-  filterHeader: {
+  filtersHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
   },
-  filterTitle: {
+  filtersTitle: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.typography.fontWeight.semibold,
     color: theme.colors.textPrimary,
@@ -529,6 +534,11 @@ const styles = StyleSheet.create({
   clearButtonText: {
     color: theme.colors.primary,
     fontWeight: theme.typography.fontWeight.medium,
+  },
+  statusChipContainer: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.gray200,
+    paddingTop: theme.spacing.md,
   },
   listContent: {
     paddingHorizontal: theme.spacing.lg,
