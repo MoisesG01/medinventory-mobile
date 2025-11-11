@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -268,37 +269,99 @@ const EquipmentsListScreen = () => {
     filters.nome.trim() || filters.statusOperacional
   );
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.heroWrapper}>
-        <LinearGradient
-          colors={theme.colors.gradients.primary}
-          style={styles.hero}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.heroContent}>
-            <View style={styles.heroText}>
-              <Text style={styles.heroTitle}>Equipamentos</Text>
-              <Text style={styles.heroSubtitle}>
-                Gerencie o inventário hospitalar com agilidade
-              </Text>
-            </View>
-            <View style={styles.heroBadge}>
-              <Ionicons
-                name="medkit-outline"
-                size={20}
-                color={theme.colors.primary}
-              />
-              <Text style={styles.heroBadgeText}>
-                {totalEquipments} itens cadastrados
+  const renderHeader = () => (
+    <View style={styles.headerContainer}>
+      <LinearGradient
+        colors={theme.colors.gradients.primary}
+        style={styles.hero}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.heroContent}>
+          <View style={styles.heroText}>
+            <Text style={styles.heroTitle}>Equipamentos</Text>
+            <Text style={styles.heroSubtitle}>
+              Gerencie o inventário hospitalar com agilidade
+            </Text>
+          </View>
+          <View style={styles.heroBadge}>
+            <Ionicons
+              name="medkit-outline"
+              size={20}
+              color={theme.colors.primary}
+            />
+            <Text style={styles.heroBadgeText}>
+              {totalEquipments} itens cadastrados
+            </Text>
+          </View>
+        </View>
+        <View style={styles.heroStats}>
+          <View style={styles.heroStatCard}>
+            <Ionicons
+              name="checkmark-circle"
+              size={18}
+              color={theme.colors.success}
+            />
+            <View style={styles.heroStatText}>
+              <Text style={styles.heroStatLabel}>Disponíveis</Text>
+              <Text style={styles.heroStatValue}>
+                {
+                  equipments.filter(
+                    (item) => item.statusOperacional === "DISPONIVEL"
+                  ).length
+                }
               </Text>
             </View>
           </View>
-        </LinearGradient>
-      </View>
+          <View style={styles.heroStatCard}>
+            <Ionicons name="construct" size={18} color={theme.colors.warning} />
+            <View style={styles.heroStatText}>
+              <Text style={styles.heroStatLabel}>Em manutenção</Text>
+              <Text style={styles.heroStatValue}>
+                {
+                  equipments.filter(
+                    (item) => item.statusOperacional === "EM_MANUTENCAO"
+                  ).length
+                }
+              </Text>
+            </View>
+          </View>
+          <View style={styles.heroStatCard}>
+            <Ionicons name="time" size={18} color={theme.colors.info} />
+            <View style={styles.heroStatText}>
+              <Text style={styles.heroStatLabel}>Atualizado em</Text>
+              <Text style={styles.heroStatValue}>
+                {new Date().toLocaleDateString()}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </LinearGradient>
 
-      <View style={styles.filtersContainer}>
+      <View style={styles.filterCard}>
+        <View style={styles.filterHeader}>
+          <View>
+            <Text style={styles.filterTitle}>Filtros rápidos</Text>
+            <Text style={styles.filterSubtitle}>
+              Refine a busca por status e nome
+            </Text>
+          </View>
+          {statusFiltersActive && (
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={handleClearFilters}
+            >
+              <Ionicons
+                name="refresh-outline"
+                size={16}
+                color={theme.colors.primary}
+                style={{ marginRight: theme.spacing.xs }}
+              />
+              <Text style={styles.clearButtonText}>Limpar</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         <View style={styles.searchRow}>
           <View style={styles.searchInputWrapper}>
             <Ionicons
@@ -308,7 +371,7 @@ const EquipmentsListScreen = () => {
             />
             <TextInput
               style={styles.searchInput}
-              placeholder="Buscar por nome"
+              placeholder="Buscar por nome ou código patrimonial"
               placeholderTextColor={theme.colors.textSecondary}
               value={filters.nome}
               onChangeText={(text) =>
@@ -323,26 +386,19 @@ const EquipmentsListScreen = () => {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.statusChipsRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.statusChipsRow}
+        >
           {STATUS_OPTIONS.map(renderStatusOption)}
-        </View>
-
-        {statusFiltersActive && (
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={handleClearFilters}
-          >
-            <Ionicons
-              name="refresh-outline"
-              size={16}
-              color={theme.colors.primary}
-              style={{ marginRight: theme.spacing.xs }}
-            />
-            <Text style={styles.clearButtonText}>Limpar filtros</Text>
-          </TouchableOpacity>
-        )}
+        </ScrollView>
       </View>
+    </View>
+  );
 
+  return (
+    <SafeAreaView style={styles.container}>
       {loading && !refreshing && equipments.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -355,6 +411,8 @@ const EquipmentsListScreen = () => {
           contentContainerStyle={styles.listContent}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.4}
+          ListHeaderComponent={renderHeader}
+          ListHeaderComponentStyle={styles.listHeaderComponent}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -385,9 +443,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  heroWrapper: {
+  headerContainer: {
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
+    gap: theme.spacing.md,
   },
   hero: {
     borderRadius: theme.borderRadius.xxl,
@@ -428,15 +487,57 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontWeight: theme.typography.fontWeight.medium,
   },
-  filtersContainer: {
-    marginHorizontal: theme.spacing.lg,
-    marginTop: -theme.spacing.xl,
+  heroStats: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: theme.spacing.lg,
+    gap: theme.spacing.sm,
+  },
+  heroStatCard: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    gap: theme.spacing.sm,
+  },
+  heroStatText: {
+    flex: 1,
+  },
+  heroStatLabel: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: theme.typography.fontSize.xs,
+  },
+  heroStatValue: {
+    color: theme.colors.white,
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.semibold,
+  },
+  filterCard: {
     backgroundColor: theme.colors.white,
     borderRadius: theme.borderRadius.xxl,
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.xl,
     paddingBottom: theme.spacing.md,
     ...theme.shadows.md,
+  },
+  filterHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  filterTitle: {
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.textPrimary,
+  },
+  filterSubtitle: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
   },
   searchRow: {
     flexDirection: "row",
@@ -471,9 +572,9 @@ const styles = StyleSheet.create({
   },
   statusChipsRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    paddingRight: theme.spacing.sm,
   },
   statusChip: {
     paddingHorizontal: theme.spacing.md,
