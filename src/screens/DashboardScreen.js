@@ -94,7 +94,7 @@ const DashboardScreen = () => {
       icon: "medkit-outline",
       color: theme.colors.white,
       gradient: theme.colors.gradients.primary,
-      onPress: () => navigation.navigate("Equipments"),
+      onPress: () => navigation.navigate("EquipmentsTab"),
     },
   ];
 

@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
-  SafeAreaView,
   View,
   Text,
   StyleSheet,
@@ -11,6 +10,8 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   useFocusEffect,
   useNavigation,
@@ -63,6 +64,7 @@ const EquipmentsListScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [meta, setMeta] = useState(null);
 
   useEffect(() => {
     filtersRef.current = filters;
@@ -88,6 +90,7 @@ const EquipmentsListScreen = () => {
         const { items, meta } = parseListResponse(response);
         setEquipments((prev) => (append ? [...prev, ...items] : items));
         setPage(requestedPage);
+        setMeta(meta);
 
         if (meta && typeof meta.totalPages === "number") {
           setHasMore(requestedPage < meta.totalPages);
@@ -260,13 +263,39 @@ const EquipmentsListScreen = () => {
     );
   };
 
+  const totalEquipments = meta?.total ?? equipments.length;
+  const statusFiltersActive = Boolean(
+    filters.nome.trim() || filters.statusOperacional
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Equipamentos</Text>
-        <Text style={styles.headerSubtitle}>
-          Gerencie o inventário de equipamentos hospitalares
-        </Text>
+      <View style={styles.heroWrapper}>
+        <LinearGradient
+          colors={theme.colors.gradients.primary}
+          style={styles.hero}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.heroContent}>
+            <View style={styles.heroText}>
+              <Text style={styles.heroTitle}>Equipamentos</Text>
+              <Text style={styles.heroSubtitle}>
+                Gerencie o inventário hospitalar com agilidade
+              </Text>
+            </View>
+            <View style={styles.heroBadge}>
+              <Ionicons
+                name="medkit-outline"
+                size={20}
+                color={theme.colors.primary}
+              />
+              <Text style={styles.heroBadgeText}>
+                {totalEquipments} itens cadastrados
+              </Text>
+            </View>
+          </View>
+        </LinearGradient>
       </View>
 
       <View style={styles.filtersContainer}>
@@ -298,18 +327,20 @@ const EquipmentsListScreen = () => {
           {STATUS_OPTIONS.map(renderStatusOption)}
         </View>
 
-        <TouchableOpacity
-          style={styles.clearButton}
-          onPress={handleClearFilters}
-        >
-          <Ionicons
-            name="refresh-outline"
-            size={16}
-            color={theme.colors.primary}
-            style={{ marginRight: theme.spacing.xs }}
-          />
-          <Text style={styles.clearButtonText}>Limpar filtros</Text>
-        </TouchableOpacity>
+        {statusFiltersActive && (
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={handleClearFilters}
+          >
+            <Ionicons
+              name="refresh-outline"
+              size={16}
+              color={theme.colors.primary}
+              style={{ marginRight: theme.spacing.xs }}
+            />
+            <Text style={styles.clearButtonText}>Limpar filtros</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {loading && !refreshing && equipments.length === 0 ? (
@@ -354,24 +385,58 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  header: {
-    paddingHorizontal: theme.spacing.xl,
-    paddingTop: theme.spacing.xl,
+  heroWrapper: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
   },
-  headerTitle: {
+  hero: {
+    borderRadius: theme.borderRadius.xxl,
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+    ...theme.shadows.md,
+  },
+  heroContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing.lg,
+  },
+  heroText: {
+    flex: 1,
+  },
+  heroTitle: {
     fontSize: theme.typography.fontSize.xxl,
     fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.textPrimary,
+    color: theme.colors.white,
     marginBottom: theme.spacing.xs,
   },
-  headerSubtitle: {
+  heroSubtitle: {
     fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textSecondary,
+    color: "rgba(255,255,255,0.85)",
+    lineHeight: 20,
+  },
+  heroBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.white,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.full,
+    gap: theme.spacing.xs,
+  },
+  heroBadgeText: {
+    color: theme.colors.primary,
+    fontWeight: theme.typography.fontWeight.medium,
   },
   filtersContainer: {
-    paddingHorizontal: theme.spacing.xl,
-    paddingTop: theme.spacing.lg,
+    marginHorizontal: theme.spacing.lg,
+    marginTop: -theme.spacing.xl,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.xxl,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.xl,
     paddingBottom: theme.spacing.md,
+    ...theme.shadows.md,
   },
   searchRow: {
     flexDirection: "row",

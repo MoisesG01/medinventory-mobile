@@ -123,8 +123,11 @@ const EquipmentDetailScreen = () => {
             try {
               await equipmentApi.remove(equipment.id);
               Alert.alert("Sucesso", "Equipamento excluído com sucesso.");
-              navigation.navigate("Equipments", {
-                refresh: Date.now(),
+              navigation.navigate("MainTabs", {
+                screen: "EquipmentsTab",
+                params: {
+                  refresh: Date.now(),
+                },
               });
               navigation.goBack();
             } catch (error) {
