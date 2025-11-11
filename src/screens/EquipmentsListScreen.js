@@ -11,7 +11,11 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
-import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { equipmentApi } from "../services/api";
@@ -158,10 +162,7 @@ const EquipmentsListScreen = () => {
     return (
       <TouchableOpacity
         key={value}
-        style={[
-          styles.statusChip,
-          selected && styles.statusChipSelected,
-        ]}
+        style={[styles.statusChip, selected && styles.statusChipSelected]}
         onPress={() => {
           const nextValue = selected ? "" : value;
           const updatedFilters = {
@@ -557,4 +558,3 @@ const styles = StyleSheet.create({
 });
 
 export default EquipmentsListScreen;
-
