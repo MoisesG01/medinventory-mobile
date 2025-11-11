@@ -12,7 +12,6 @@ import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
 
 // Import screens
 import DashboardScreen from "./src/screens/DashboardScreen";
-import SearchAssetScreen from "./src/screens/SearchAssetScreen";
 import ReportsScreen from "./src/screens/ReportsScreen";
 import ChartsScreen from "./src/screens/ChartsScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
@@ -38,21 +37,19 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
+          const iconMap = {
+            Dashboard: ["home", "home-outline"],
+            EquipmentsTab: ["medkit", "medkit-outline"],
+            Reports: ["bar-chart", "bar-chart-outline"],
+            Charts: ["analytics", "analytics-outline"],
+            Profile: ["person", "person-outline"],
+          };
 
-          if (route.name === "Dashboard") {
-            iconName = focused ? "home" : "home-outline";
-          } else if (route.name === "Search") {
-            iconName = focused ? "search" : "search-outline";
-          } else if (route.name === "Reports") {
-            iconName = focused ? "bar-chart" : "bar-chart-outline";
-          } else if (route.name === "Charts") {
-            iconName = focused ? "analytics" : "analytics-outline";
-          } else if (route.name === "Profile") {
-            iconName = focused ? "person" : "person-outline";
-          }
+          const [activeIcon, inactiveIcon] =
+            iconMap[route.name] || ["ellipse", "ellipse-outline"];
+          const tabIconName = focused ? activeIcon : inactiveIcon;
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return <Ionicons name={tabIconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textSecondary,
@@ -77,9 +74,9 @@ function MainTabs() {
         options={{ tabBarLabel: "Início" }}
       />
       <Tab.Screen
-        name="Search"
-        component={SearchAssetScreen}
-        options={{ tabBarLabel: "Buscar" }}
+        name="EquipmentsTab"
+        component={EquipmentsListScreen}
+        options={{ tabBarLabel: "Equipamentos" }}
       />
       <Tab.Screen
         name="Reports"
