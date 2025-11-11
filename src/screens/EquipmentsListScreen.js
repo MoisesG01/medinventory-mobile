@@ -507,8 +507,9 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.fontWeight.medium,
   },
   listContent: {
-    paddingHorizontal: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xxl * 2,
+    paddingTop: theme.spacing.md,
   },
   card: {
     backgroundColor: theme.colors.white,
