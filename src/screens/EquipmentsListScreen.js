@@ -9,10 +9,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
-  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import {
   useFocusEffect,
   useNavigation,
@@ -270,98 +268,13 @@ const EquipmentsListScreen = () => {
   );
 
   const renderHeader = () => (
-    <View style={styles.headerContainer}>
-      <LinearGradient
-        colors={theme.colors.gradients.primary}
-        style={styles.hero}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.heroContent}>
-          <View style={styles.heroText}>
-            <Text style={styles.heroTitle}>Equipamentos</Text>
-            <Text style={styles.heroSubtitle}>
-              Gerencie o inventário hospitalar com agilidade
-            </Text>
-          </View>
-          <View style={styles.heroBadge}>
-            <Ionicons
-              name="medkit-outline"
-              size={20}
-              color={theme.colors.primary}
-            />
-            <Text style={styles.heroBadgeText}>
-              {totalEquipments} itens cadastrados
-            </Text>
-          </View>
-        </View>
-        <View style={styles.heroStats}>
-          <View style={styles.heroStatCard}>
-            <Ionicons
-              name="checkmark-circle"
-              size={18}
-              color={theme.colors.success}
-            />
-            <View style={styles.heroStatText}>
-              <Text style={styles.heroStatLabel}>Disponíveis</Text>
-              <Text style={styles.heroStatValue}>
-                {
-                  equipments.filter(
-                    (item) => item.statusOperacional === "DISPONIVEL"
-                  ).length
-                }
-              </Text>
-            </View>
-          </View>
-          <View style={styles.heroStatCard}>
-            <Ionicons name="construct" size={18} color={theme.colors.warning} />
-            <View style={styles.heroStatText}>
-              <Text style={styles.heroStatLabel}>Em manutenção</Text>
-              <Text style={styles.heroStatValue}>
-                {
-                  equipments.filter(
-                    (item) => item.statusOperacional === "EM_MANUTENCAO"
-                  ).length
-                }
-              </Text>
-            </View>
-          </View>
-          <View style={styles.heroStatCard}>
-            <Ionicons name="time" size={18} color={theme.colors.info} />
-            <View style={styles.heroStatText}>
-              <Text style={styles.heroStatLabel}>Atualizado em</Text>
-              <Text style={styles.heroStatValue}>
-                {new Date().toLocaleDateString()}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </LinearGradient>
+    <View style={styles.header}>
+      <Text style={styles.headerTitle}>Equipamentos</Text>
+      <Text style={styles.headerSubtitle}>
+        Você possui {totalEquipments} equipamentos cadastrados
+      </Text>
 
-      <View style={styles.filterCard}>
-        <View style={styles.filterHeader}>
-          <View>
-            <Text style={styles.filterTitle}>Filtros rápidos</Text>
-            <Text style={styles.filterSubtitle}>
-              Refine a busca por status e nome
-            </Text>
-          </View>
-          {statusFiltersActive && (
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={handleClearFilters}
-            >
-              <Ionicons
-                name="refresh-outline"
-                size={16}
-                color={theme.colors.primary}
-                style={{ marginRight: theme.spacing.xs }}
-              />
-              <Text style={styles.clearButtonText}>Limpar</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
+      <View style={styles.filtersContainer}>
         <View style={styles.searchRow}>
           <View style={styles.searchInputWrapper}>
             <Ionicons
@@ -371,7 +284,7 @@ const EquipmentsListScreen = () => {
             />
             <TextInput
               style={styles.searchInput}
-              placeholder="Buscar por nome ou código patrimonial"
+              placeholder="Buscar por nome, modelo ou código patrimonial"
               placeholderTextColor={theme.colors.textSecondary}
               value={filters.nome}
               onChangeText={(text) =>
@@ -386,13 +299,24 @@ const EquipmentsListScreen = () => {
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.statusChipsRow}
-        >
+        <View style={styles.statusChipsRow}>
           {STATUS_OPTIONS.map(renderStatusOption)}
-        </ScrollView>
+        </View>
+
+        {statusFiltersActive && (
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={handleClearFilters}
+          >
+            <Ionicons
+              name="refresh-outline"
+              size={16}
+              color={theme.colors.primary}
+              style={{ marginRight: theme.spacing.xs }}
+            />
+            <Text style={styles.clearButtonText}>Limpar filtros</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -408,11 +332,10 @@ const EquipmentsListScreen = () => {
           data={equipments}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
+          ListHeaderComponent={renderHeader}
           contentContainerStyle={styles.listContent}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.4}
-          ListHeaderComponent={renderHeader}
-          ListHeaderComponentStyle={styles.listHeaderComponent}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
