@@ -22,6 +22,9 @@ import LoginScreen from "./src/screens/LoginScreen";
 import SignupScreen from "./src/screens/SignupScreen";
 import TermsScreen from "./src/screens/TermsScreen";
 import EditProfileScreen from "./src/screens/EditProfileScreen";
+import EquipmentsListScreen from "./src/screens/EquipmentsListScreen";
+import EquipmentDetailScreen from "./src/screens/EquipmentDetailScreen";
+import EquipmentFormScreen from "./src/screens/EquipmentFormScreen";
 
 // Import theme
 import theme from "./src/styles/theme";
@@ -139,6 +142,9 @@ function RootNavigator() {
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="Terms" component={TermsScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+          <Stack.Screen name="Equipments" component={EquipmentsListScreen} />
+          <Stack.Screen name="EquipmentDetail" component={EquipmentDetailScreen} />
+          <Stack.Screen name="EquipmentForm" component={EquipmentFormScreen} />
         </Stack.Navigator>
       ) : (
         <Stack.Navigator

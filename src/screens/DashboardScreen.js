@@ -83,11 +83,10 @@ const DashboardScreen = () => {
       onPress: () => navigation.navigate("Notifications"),
     },
     {
-      title: "Adicionar Ativo",
+      title: "Equipamentos",
       icon: "add-circle-outline",
       color: theme.colors.success,
-      onPress: () =>
-        Alert.alert("Adicionar Ativo", "Funcionalidade em desenvolvimento"),
+      onPress: () => navigation.navigate("Equipments"),
     },
   ];
 
