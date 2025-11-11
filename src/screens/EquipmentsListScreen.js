@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+} from "react";
 import {
   View,
   Text,
@@ -18,6 +24,7 @@ import {
   useRoute,
 } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { equipmentApi } from "../services/api";
 import theme from "../styles/theme";
@@ -268,76 +275,199 @@ const EquipmentsListScreen = () => {
     filters.nome.trim() || filters.statusOperacional
   );
 
-  const renderHeader = () => (
-    <View style={styles.headerWrapper}>
-      <View style={styles.hero}>
-        <View style={styles.heroTop}>
-          <View style={styles.heroText}>
-            <Text style={styles.heroTitle}>Equipamentos</Text>
-            <Text style={styles.heroSubtitle}>
-              Gerencie e monitore o parque tecnológico do hospital em tempo real.
-            </Text>
-          </View>
-          <View style={styles.heroCountBadge}>
-            <Ionicons
-              name="medkit-outline"
-              size={20}
-              color={theme.colors.primary}
-            />
-            <Text style={styles.heroCount}>{totalEquipments}</Text>
-            <Text style={styles.heroCountLabel}>cadastrados</Text>
-          </View>
-        </View>
-      </View>
+  const statusCounts = useMemo(() => {
+    const baseCounts = {
+      DISPONIVEL: 0,
+      EM_USO: 0,
+      EM_MANUTENCAO: 0,
+      INATIVO: 0,
+      SUCATEADO: 0,
+    };
 
-      <View style={styles.filtersCard}>
-        <View style={styles.filtersHeader}>
-          <Text style={styles.filtersTitle}>Filtros e buscas</Text>
-          {statusFiltersActive && (
+    if (meta?.statusCounts && typeof meta.statusCounts === "object") {
+      return { ...baseCounts, ...meta.statusCounts };
+    }
+
+    const derivedCounts = { ...baseCounts };
+    equipments.forEach((equipment) => {
+      const status = equipment?.statusOperacional;
+      if (status && derivedCounts[status] !== undefined) {
+        derivedCounts[status] += 1;
+      }
+    });
+
+    return derivedCounts;
+  }, [meta?.statusCounts, equipments]);
+
+  const summaryCards = useMemo(
+    () => [
+      {
+        id: "available",
+        label: "Disponíveis",
+        value: statusCounts.DISPONIVEL ?? 0,
+        icon: "checkmark-circle-outline",
+        color: theme.colors.success,
+      },
+      {
+        id: "in_use",
+        label: "Em uso",
+        value: statusCounts.EM_USO ?? 0,
+        icon: "pulse-outline",
+        color: theme.colors.info,
+      },
+      {
+        id: "maintenance",
+        label: "Em manutenção",
+        value: statusCounts.EM_MANUTENCAO ?? 0,
+        icon: "construct-outline",
+        color: theme.colors.warning,
+      },
+      {
+        id: "inactive",
+        label: "Inativos",
+        value: statusCounts.INATIVO ?? 0,
+        icon: "alert-circle-outline",
+        color: theme.colors.gray500,
+      },
+    ],
+    [statusCounts]
+  );
+
+  const renderHeader = () => (
+    <View style={styles.headerContainer}>
+      <LinearGradient
+        colors={theme.colors.gradients.primary}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headerGradient}
+      >
+        <View style={styles.headerContentWrapper}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <View style={styles.headerIcon}>
+                <Ionicons
+                  name="medkit-outline"
+                  size={26}
+                  color={theme.colors.white}
+                />
+              </View>
+              <View>
+                <Text style={styles.headerTitle}>Gestão de Equipamentos</Text>
+                <Text style={styles.headerSubtitle}>
+                  Monitoramento dos ativos
+                </Text>
+              </View>
+            </View>
             <TouchableOpacity
-              style={styles.clearButton}
-              onPress={handleClearFilters}
+              style={styles.headerAction}
+              onPress={handleRefresh}
             >
               <Ionicons
                 name="refresh-outline"
-                size={16}
-                color={theme.colors.primary}
-                style={{ marginRight: theme.spacing.xs }}
+                size={22}
+                color={theme.colors.white}
               />
-              <Text style={styles.clearButtonText}>Limpar</Text>
             </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.searchRow}>
-          <View style={styles.searchInputWrapper}>
-            <Ionicons
-              name="search-outline"
-              size={20}
-              color={theme.colors.textSecondary}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Buscar por nome, modelo ou código patrimonial"
-              placeholderTextColor={theme.colors.textSecondary}
-              value={filters.nome}
-              onChangeText={(text) =>
-                setFilters((prev) => ({ ...prev, nome: text }))
-              }
-              returnKeyType="search"
-              onSubmitEditing={handleSearch}
-            />
           </View>
-          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-            <Ionicons name="search" size={20} color={theme.colors.white} />
-          </TouchableOpacity>
-        </View>
 
-        <View style={styles.statusChipContainer}>
+          <View style={styles.headerHighlights}>
+            <View style={styles.headerHighlight}>
+              <Text style={styles.headerHighlightValue}>{totalEquipments}</Text>
+              <View style={styles.headerHighlightDivider} />
+              <Text style={styles.headerHighlightLabel}>
+                Equipamentos cadastrados
+              </Text>
+            </View>
+            <View style={styles.headerHighlight}>
+              <Text style={styles.headerHighlightValue}>
+                {statusCounts.EM_MANUTENCAO ?? 0}
+              </Text>
+              <View style={styles.headerHighlightDivider} />
+              <Text style={styles.headerHighlightLabel}>Em manutenção</Text>
+            </View>
+          </View>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.headerBottom}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.summaryRow}
+        >
+          {summaryCards.map((card) => (
+            <View key={card.id} style={styles.summaryPill}>
+              <View
+                style={[
+                  styles.summaryPillIcon,
+                  { backgroundColor: card.color + "15" },
+                ]}
+              >
+                <Ionicons name={card.icon} size={16} color={card.color} />
+              </View>
+              <View>
+                <Text style={styles.summaryPillValue}>{card.value}</Text>
+                <Text style={styles.summaryPillLabel}>{card.label}</Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+
+        <View style={styles.filtersCard}>
+          <View style={styles.filtersHeader}>
+            <View>
+              <Text style={styles.filtersTitle}>Filtros e busca</Text>
+              <Text style={styles.filtersSubtitle}>
+                Refine os resultados por status ou palavra-chave
+              </Text>
+            </View>
+            {statusFiltersActive && (
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={handleClearFilters}
+              >
+                <Ionicons
+                  name="refresh-outline"
+                  size={16}
+                  color={theme.colors.primary}
+                  style={{ marginRight: theme.spacing.xs }}
+                />
+                <Text style={styles.clearButtonText}>Limpar</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.searchRow}>
+            <View style={styles.searchInputWrapper}>
+              <Ionicons
+                name="search-outline"
+                size={20}
+                color={theme.colors.textSecondary}
+              />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar por nome, modelo ou patrimônio"
+                placeholderTextColor={theme.colors.textSecondary}
+                value={filters.nome}
+                onChangeText={(text) =>
+                  setFilters((prev) => ({ ...prev, nome: text }))
+                }
+                returnKeyType="search"
+                onSubmitEditing={handleSearch}
+              />
+            </View>
+            <TouchableOpacity
+              style={styles.searchButton}
+              onPress={handleSearch}
+            >
+              <Ionicons name="search" size={20} color={theme.colors.white} />
+            </TouchableOpacity>
+          </View>
+
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.statusChipsRow}
+            contentContainerStyle={styles.statusChipContainer}
           >
             {STATUS_OPTIONS.map(renderStatusOption)}
           </ScrollView>
@@ -391,67 +521,107 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  headerWrapper: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.lg,
-    gap: theme.spacing.lg,
+  headerContainer: {
+    paddingTop: theme.spacing.md,
+    marginHorizontal: -theme.spacing.lg,
   },
-  hero: {
+  headerGradient: {
     width: "100%",
-    borderRadius: theme.borderRadius.xxl,
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg,
+    borderBottomLeftRadius: theme.borderRadius.xxl,
+    borderBottomRightRadius: theme.borderRadius.xxl,
+    overflow: "hidden",
     ...theme.shadows.md,
   },
-  heroTop: {
+  headerContentWrapper: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
+  },
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: theme.spacing.lg,
-  },
-  heroText: {
     flex: 1,
+    gap: theme.spacing.md,
   },
-  heroTitle: {
+  headerIcon: {
+    backgroundColor: theme.colors.white + "20",
+    borderRadius: theme.borderRadius.full,
+    padding: theme.spacing.sm,
+  },
+  headerTitle: {
     fontSize: theme.typography.fontSize.xxl,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.white,
     marginBottom: theme.spacing.xs,
   },
-  heroSubtitle: {
+  headerSubtitle: {
     fontSize: theme.typography.fontSize.md,
-    color: "rgba(255,255,255,0.85)",
+    color: "rgba(255,255,255,0.8)",
     lineHeight: 20,
   },
-  heroCountBadge: {
+  headerAction: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.white,
-    paddingVertical: theme.spacing.sm,
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  headerHighlights: {
+    marginTop: theme.spacing.md,
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+  },
+  headerHighlight: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.xs,
+    paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.borderRadius.xl,
-    minWidth: 120,
-    gap: 2,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
   },
-  heroCount: {
-    fontSize: theme.typography.fontSize.xxl,
+  headerHighlightDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: "rgba(255,255,255,0.3)",
+  },
+  headerHighlightValue: {
+    fontSize: theme.typography.fontSize.xl,
     fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.primary,
+    color: theme.colors.white,
+    textAlign: "center",
+    minWidth: 36,
   },
-  heroCountLabel: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.textSecondary,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+  headerHighlightLabel: {
+    fontSize: theme.typography.fontSize.sm,
+    color: "rgba(255,255,255,0.85)",
+    textAlign: "center",
+    flexShrink: 1,
+  },
+  headerBottom: {
+    marginTop: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
+    gap: theme.spacing.lg,
   },
   filtersCard: {
     width: "100%",
     backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius.xxl,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.lg,
-    gap: theme.spacing.md,
-    ...theme.shadows.md,
+    borderRadius: theme.borderRadius.xl,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.sm,
+    ...theme.shadows.sm,
   },
   filtersHeader: {
     flexDirection: "row",
@@ -463,24 +633,23 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.fontWeight.semibold,
     color: theme.colors.textPrimary,
   },
-  filterSubtitle: {
+  filtersSubtitle: {
+    marginTop: 2,
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
   },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: theme.spacing.md,
   },
   searchInputWrapper: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.borderRadius.lg,
     paddingHorizontal: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.gray200,
+    paddingVertical: theme.spacing.xs,
     marginRight: theme.spacing.sm,
   },
   searchInput: {
@@ -491,25 +660,19 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.md,
   },
   searchButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: theme.colors.primary,
-  },
-  statusChipsRow: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
-    paddingRight: theme.spacing.sm,
   },
   statusChip: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.borderRadius.full,
     borderWidth: 1,
-    borderColor: theme.colors.gray300,
+    borderColor: theme.colors.gray200,
     backgroundColor: theme.colors.white,
   },
   statusChipSelected: {
@@ -527,8 +690,7 @@ const styles = StyleSheet.create({
   clearButton: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
-    paddingHorizontal: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xs,
     paddingVertical: theme.spacing.xs,
   },
   clearButtonText: {
@@ -536,9 +698,11 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.fontWeight.medium,
   },
   statusChipContainer: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.gray200,
-    paddingTop: theme.spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    paddingRight: theme.spacing.sm,
   },
   listContent: {
     paddingHorizontal: theme.spacing.lg,
@@ -654,6 +818,40 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     ...theme.shadows.lg,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: theme.spacing.sm,
+    paddingLeft: theme.spacing.lg,
+    paddingRight: theme.spacing.lg,
+  },
+  summaryPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.full,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    marginRight: theme.spacing.sm,
+    ...theme.shadows.sm,
+  },
+  summaryPillIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  summaryPillValue: {
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.textPrimary,
+  },
+  summaryPillLabel: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.textSecondary,
   },
 });
 
