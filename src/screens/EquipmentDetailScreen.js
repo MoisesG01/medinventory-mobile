@@ -10,7 +10,13 @@ import {
   Alert,
   Modal,
 } from "react-native";
-import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { equipmentApi } from "../services/api";
@@ -23,6 +29,45 @@ const STATUS_OPTIONS = [
   "INATIVO",
   "SUCATEADO",
 ];
+
+const STATUS_INFO = {
+  DISPONIVEL: {
+    label: "Disponível",
+    icon: "checkmark-circle",
+    color: theme.colors.success,
+    background: theme.colors.success + "20",
+  },
+  EM_USO: {
+    label: "Em uso",
+    icon: "pulse-outline",
+    color: theme.colors.info,
+    background: theme.colors.info + "20",
+  },
+  EM_MANUTENCAO: {
+    label: "Manutenção",
+    icon: "construct-outline",
+    color: theme.colors.warning,
+    background: theme.colors.warning + "20",
+  },
+  INATIVO: {
+    label: "Inativo",
+    icon: "pause-circle-outline",
+    color: theme.colors.gray500,
+    background: theme.colors.gray500 + "20",
+  },
+  SUCATEADO: {
+    label: "Sucateado",
+    icon: "trash-outline",
+    color: theme.colors.error,
+    background: theme.colors.error + "20",
+  },
+  DEFAULT: {
+    label: "Status desconhecido",
+    icon: "help-circle-outline",
+    color: theme.colors.textSecondary,
+    background: theme.colors.gray200,
+  },
+};
 
 const LABELS = {
   nome: "Nome",
@@ -49,6 +94,61 @@ const LABELS = {
   updatedAt: "Atualizado em",
 };
 
+const DETAIL_GROUPS = [
+  {
+    id: "identification",
+    title: "Identificação",
+    icon: "id-card-outline",
+    fields: [
+      "tipo",
+      "fabricante",
+      "modelo",
+      "numeroSerie",
+      "codigoPatrimonial",
+    ],
+  },
+  {
+    id: "location",
+    title: "Localização e Status",
+    icon: "pin-outline",
+    fields: [
+      "setorAtual",
+      "statusOperacional",
+      "criticidade",
+      "responsavelTecnico",
+    ],
+  },
+  {
+    id: "acquisition",
+    title: "Aquisição",
+    icon: "calendar-outline",
+    fields: [
+      "dataAquisicao",
+      "valorAquisicao",
+      "dataFimGarantia",
+      "vidaUtilEstimativa",
+    ],
+  },
+  {
+    id: "maintenance",
+    title: "Manutenção",
+    icon: "construct-outline",
+    fields: ["dataUltimaManutencao", "dataProximaManutencao"],
+  },
+  {
+    id: "regulatory",
+    title: "Regulatório",
+    icon: "shield-checkmark-outline",
+    fields: ["registroAnvisa", "classeRisco"],
+  },
+  {
+    id: "audit",
+    title: "Auditoria",
+    icon: "time-outline",
+    fields: ["userId", "createdAt", "updatedAt"],
+  },
+];
+
 const formatDate = (value) => {
   if (!value) return "Não informado";
   const date = new Date(value);
@@ -58,9 +158,54 @@ const formatDate = (value) => {
   return date.toLocaleDateString();
 };
 
+const getStatusInfo = (status) => STATUS_INFO[status] || STATUS_INFO.DEFAULT;
+
+const formatStatus = (status) => getStatusInfo(status).label;
+
+const formatCurrency = (value) =>
+  value === undefined || value === null
+    ? "Não informado"
+    : `R$ ${Number(value).toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+      })}`;
+
+const formatValue = (field, value) => {
+  if (!value && value !== 0) {
+    return "Não informado";
+  }
+
+  if (
+    [
+      "dataAquisicao",
+      "dataFimGarantia",
+      "dataUltimaManutencao",
+      "dataProximaManutencao",
+      "createdAt",
+      "updatedAt",
+    ].includes(field)
+  ) {
+    return formatDate(value);
+  }
+
+  if (field === "valorAquisicao") {
+    return formatCurrency(value);
+  }
+
+  if (field === "vidaUtilEstimativa") {
+    return `${value} ano${Number(value) === 1 ? "" : "s"}`;
+  }
+
+  if (field === "statusOperacional") {
+    return formatStatus(value);
+  }
+
+  return value;
+};
+
 const EquipmentDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const insets = useSafeAreaInsets();
 
   const equipmentId = route.params?.equipmentId;
   const initialEquipment = route.params?.equipment ?? null;
@@ -182,105 +327,276 @@ const EquipmentDetailScreen = () => {
     );
   }
 
-  const details = [
-    "nome",
-    "tipo",
-    "fabricante",
-    "modelo",
-    "numeroSerie",
-    "codigoPatrimonial",
-    "setorAtual",
-    "statusOperacional",
-    "dataAquisicao",
-    "valorAquisicao",
-    "dataFimGarantia",
-    "vidaUtilEstimativa",
-    "registroAnvisa",
-    "classeRisco",
-    "dataUltimaManutencao",
-    "dataProximaManutencao",
-    "responsavelTecnico",
-    "criticidade",
-    "observacoes",
-    "userId",
-    "createdAt",
-    "updatedAt",
-  ];
+  const statusInfo = getStatusInfo(equipment.statusOperacional);
+
+  const heroSubtitle =
+    [equipment.fabricante, equipment.modelo].filter(Boolean).join(" • ") ||
+    "Detalhes do equipamento";
+
+  const quickHighlights = [
+    equipment.codigoPatrimonial && {
+      id: "code",
+      icon: "qr-code-outline",
+      label: "Código patrimonial",
+      value: equipment.codigoPatrimonial,
+    },
+    equipment.setorAtual && {
+      id: "sector",
+      icon: "business-outline",
+      label: "Setor atual",
+      value: equipment.setorAtual,
+    },
+    equipment.modelo && {
+      id: "model",
+      icon: "hardware-chip-outline",
+      label: "Modelo",
+      value: equipment.modelo,
+    },
+  ].filter(Boolean);
+
+  const observations = equipment.observacoes?.trim();
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={20} color={theme.colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{equipment.nome}</Text>
-      </View>
-
-      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Informações gerais</Text>
-          {details.map((field) => {
-            const value = equipment[field];
-            let displayValue = value;
-
-            if (
-              [
-                "dataAquisicao",
-                "dataFimGarantia",
-                "dataUltimaManutencao",
-                "dataProximaManutencao",
-                "createdAt",
-                "updatedAt",
-              ].includes(field)
-            ) {
-              displayValue = formatDate(value);
-            } else if (field === "valorAquisicao" && value !== undefined && value !== null) {
-              displayValue = `R$ ${Number(value).toLocaleString("pt-BR", {
-                minimumFractionDigits: 2,
-              })}`;
-            } else if (field === "vidaUtilEstimativa" && value !== undefined && value !== null) {
-              displayValue = `${value} ano${Number(value) === 1 ? "" : "s"}`;
-            } else if (field === "statusOperacional" && value) {
-              displayValue = value.replace(/_/g, " ");
-            } else if (!value) {
-              displayValue = "Não informado";
-            }
-
-            return (
-              <View key={field} style={styles.detailRow}>
-                <Text style={styles.detailLabel}>{LABELS[field] ?? field}</Text>
-                <Text style={styles.detailValue}>{displayValue}</Text>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <LinearGradient
+          colors={theme.colors.gradients.primary}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[
+            styles.heroGradient,
+            { paddingTop: insets.top + theme.spacing.md },
+          ]}
+        >
+          <View style={styles.heroContentWrapper}>
+            <View style={styles.heroTopRow}>
+              <View style={styles.heroIconWrapper}>
+                <Ionicons
+                  name="medkit-outline"
+                  size={26}
+                  color={theme.colors.white}
+                />
               </View>
-            );
-          })}
+              <View style={styles.heroTextGroup}>
+                <Text style={styles.heroTitle}>{equipment.nome}</Text>
+                <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.heroActionButton}
+                onPress={() => setStatusModalVisible(true)}
+              >
+                <Ionicons
+                  name="sync-outline"
+                  size={22}
+                  color={theme.colors.white}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.heroHighlights}>
+              <View style={styles.heroHighlight}>
+                <Text style={styles.heroHighlightValue}>
+                  {formatStatus(equipment.statusOperacional)}
+                </Text>
+                <View style={styles.heroHighlightDivider} />
+                <Text style={styles.heroHighlightLabel}>Status atual</Text>
+              </View>
+              <View style={styles.heroHighlight}>
+                <Text style={styles.heroHighlightValue}>
+                  {formatDate(equipment.updatedAt)}
+                </Text>
+                <View style={styles.heroHighlightDivider} />
+                <Text style={styles.heroHighlightLabel}>
+                  Última atualização
+                </Text>
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {quickHighlights.length > 0 && (
+          <View style={styles.quickInfoGrid}>
+            {quickHighlights.map((item) => (
+              <View key={item.id} style={styles.quickInfoCard}>
+                <View style={styles.quickIconWrapper}>
+                  <Ionicons
+                    name={item.icon}
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.quickValue}>{item.value}</Text>
+                  <Text style={styles.quickLabel}>{item.label}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {DETAIL_GROUPS.map((group) => {
+          const items = group.fields.map((field) => {
+            const rawValue = equipment[field];
+            const value = formatValue(field, rawValue);
+            const isEmpty = !rawValue && rawValue !== 0;
+            return {
+              field,
+              label: LABELS[field] ?? field,
+              value,
+              isEmpty,
+            };
+          });
+
+          const hasContent = items.some((item) => !item.isEmpty);
+          if (!hasContent) {
+            return null;
+          }
+
+          return (
+            <View key={group.id} style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionHeaderLeft}>
+                  <View style={styles.sectionIcon}>
+                    <Ionicons
+                      name={group.icon}
+                      size={18}
+                      color={theme.colors.primary}
+                    />
+                  </View>
+                  <Text style={styles.sectionTitle}>{group.title}</Text>
+                </View>
+              </View>
+
+              <View style={styles.sectionBody}>
+                {items.map((item) => (
+                  <View key={item.field} style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>{item.label}</Text>
+                    <Text
+                      style={[
+                        styles.detailValue,
+                        item.isEmpty && styles.detailValueEmpty,
+                      ]}
+                    >
+                      {item.value}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          );
+        })}
+
+        {observations && (
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderLeft}>
+                <View style={styles.sectionIcon}>
+                  <Ionicons
+                    name="document-text-outline"
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                </View>
+                <Text style={styles.sectionTitle}>Observações</Text>
+              </View>
+            </View>
+            <Text style={styles.observationText}>{observations}</Text>
+          </View>
+        )}
+
+        <View style={styles.actionsCard}>
+          <View style={styles.actionsHeader}>
+            <Text style={styles.actionsTitle}>Ações rápidas</Text>
+            <Text style={styles.actionsSubtitle}>
+              Gerencie o equipamento com as opções abaixo
+            </Text>
+          </View>
+
+          <View style={styles.actionsList}>
+            <TouchableOpacity
+              style={styles.actionListItem}
+              onPress={() => setStatusModalVisible(true)}
+            >
+              <View style={[styles.actionIcon, styles.actionIconPrimary]}>
+                <Ionicons
+                  name="sync-outline"
+                  size={18}
+                  color={theme.colors.primary}
+                />
+              </View>
+              <View style={styles.actionTextGroup}>
+                <Text style={[styles.actionLabel, styles.actionLabelPrimary]}>
+                  Atualizar status
+                </Text>
+                <Text style={styles.actionDescription}>
+                  Mantenha o status operacional em dia
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={theme.colors.textSecondary}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionListItem}
+              onPress={handleEdit}
+            >
+              <View style={[styles.actionIcon, styles.actionIconInfo]}>
+                <Ionicons
+                  name="create-outline"
+                  size={18}
+                  color={theme.colors.info}
+                />
+              </View>
+              <View style={styles.actionTextGroup}>
+                <Text style={[styles.actionLabel, styles.actionLabelInfo]}>
+                  Editar dados
+                </Text>
+                <Text style={styles.actionDescription}>
+                  Atualize informações do equipamento
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={theme.colors.textSecondary}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionListItemDanger}
+              onPress={handleDelete}
+            >
+              <View style={[styles.actionIcon, styles.actionIconDanger]}>
+                <Ionicons
+                  name="trash-outline"
+                  size={18}
+                  color={theme.colors.error}
+                />
+              </View>
+              <View style={styles.actionTextGroup}>
+                <Text style={[styles.actionLabel, styles.actionLabelDanger]}>
+                  Excluir
+                </Text>
+                <Text style={styles.actionDescription}>
+                  Remove definitivamente este equipamento
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={theme.colors.error}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
-
-      <View style={styles.bottomActions}>
-        <TouchableOpacity
-          style={[styles.bottomButton, styles.statusButton]}
-          onPress={() => setStatusModalVisible(true)}
-        >
-          <Ionicons name="sync-outline" size={20} color={theme.colors.primary} />
-          <Text style={styles.statusButtonText}>Atualizar status</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.bottomButton, styles.editButton]}
-          onPress={handleEdit}
-        >
-          <Ionicons name="create-outline" size={20} color={theme.colors.white} />
-          <Text style={styles.editButtonText}>Editar</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.bottomButton, styles.deleteButton]}
-          onPress={handleDelete}
-        >
-          <Ionicons name="trash-outline" size={20} color={theme.colors.white} />
-          <Text style={styles.deleteButtonText}>Excluir</Text>
-        </TouchableOpacity>
-      </View>
 
       <Modal
         visible={statusModalVisible}
@@ -293,6 +609,7 @@ const EquipmentDetailScreen = () => {
             <Text style={styles.modalTitle}>Alterar status operacional</Text>
             {STATUS_OPTIONS.map((status) => {
               const selected = equipment.statusOperacional === status;
+              const statusInfo = STATUS_INFO[status] || STATUS_INFO.DEFAULT;
               return (
                 <TouchableOpacity
                   key={status}
@@ -303,13 +620,25 @@ const EquipmentDetailScreen = () => {
                   onPress={() => handleSelectStatus(status)}
                   disabled={updatingStatus}
                 >
+                  <View
+                    style={[
+                      styles.statusOptionIcon,
+                      { backgroundColor: statusInfo.background },
+                    ]}
+                  >
+                    <Ionicons
+                      name={statusInfo.icon}
+                      size={20}
+                      color={statusInfo.color}
+                    />
+                  </View>
                   <Text
                     style={[
                       styles.statusOptionText,
                       selected && styles.statusOptionTextSelected,
                     ]}
                   >
-                    {status.replace(/_/g, " ")}
+                    {statusInfo.label}
                   </Text>
                   {selected && (
                     <Ionicons
@@ -351,102 +680,260 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     color: theme.colors.textSecondary,
   },
-  header: {
+  content: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: theme.spacing.xxl,
+    gap: theme.spacing.lg,
+  },
+  heroGradient: {
+    marginHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.lg,
+    borderBottomLeftRadius: theme.borderRadius.xxl,
+    borderBottomRightRadius: theme.borderRadius.xxl,
+    overflow: "hidden",
+    ...theme.shadows.lg,
+  },
+  heroContentWrapper: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
+    gap: theme.spacing.lg,
+  },
+  heroTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.lg,
-    backgroundColor: theme.colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.gray200,
+    gap: theme.spacing.md,
   },
-  backButton: {
+  heroIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.white + "20",
+  },
+  heroTextGroup: {
+    flex: 1,
+    gap: theme.spacing.xs,
+  },
+  heroActionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  heroHighlights: {
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+  },
+  heroHighlight: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.xs,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+  },
+  heroHighlightDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: "rgba(255,255,255,0.3)",
+  },
+  heroHighlightValue: {
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.white,
+    textAlign: "center",
+  },
+  heroHighlightLabel: {
+    fontSize: theme.typography.fontSize.sm,
+    color: "rgba(255,255,255,0.85)",
+    textAlign: "center",
+  },
+  quickInfoGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.md,
+    marginHorizontal: theme.spacing.lg,
+  },
+  quickInfoCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.xl,
+    backgroundColor: theme.colors.white,
+    flexBasis: "48%",
+    flexGrow: 1,
+    ...theme.shadows.sm,
+  },
+  quickIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primary + "15",
+  },
+  quickValue: {
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.textPrimary,
+  },
+  quickLabel: {
+    marginTop: 2,
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
+  },
+  sectionCard: {
+    marginHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.xxl,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
+    ...theme.shadows.md,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  sectionHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+  },
+  sectionIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.gray100,
-    marginRight: theme.spacing.md,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontWeight.bold,
-    color: theme.colors.textPrimary,
-  },
-  content: {
-    flex: 1,
-  },
-  section: {
-    marginTop: theme.spacing.lg,
-    marginHorizontal: theme.spacing.xl,
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius.xxl,
-    ...theme.shadows.md,
+    backgroundColor: theme.colors.primary + "15",
   },
   sectionTitle: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
+  },
+  sectionBody: {
+    gap: theme.spacing.md,
   },
   detailRow: {
-    marginBottom: theme.spacing.md,
+    gap: 4,
   },
   detailLabel: {
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
-    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   detailValue: {
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
     fontWeight: theme.typography.fontWeight.medium,
   },
-  bottomActions: {
+  detailValueEmpty: {
+    color: theme.colors.textSecondary,
+    fontStyle: "italic",
+  },
+  observationText: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.textPrimary,
+    lineHeight: 22,
+  },
+  actionsCard: {
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.xxl,
+    gap: theme.spacing.md,
+    ...theme.shadows.md,
+  },
+  actionsHeader: {
+    gap: theme.spacing.xs,
+  },
+  actionsTitle: {
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.textPrimary,
+  },
+  actionsSubtitle: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
+  },
+  actionsList: {
+    gap: theme.spacing.sm,
+  },
+  actionListItem: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.lg,
-    backgroundColor: theme.colors.white,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.gray200,
+    gap: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.xl,
+    backgroundColor: theme.colors.surface,
+    ...theme.shadows.sm,
   },
-  bottomButton: {
+  actionListItemDanger: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.xl,
+    backgroundColor: theme.colors.white,
+    borderWidth: 1,
+    borderColor: theme.colors.error + "40",
+    ...theme.shadows.sm,
+  },
+  actionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+  },
+  actionIconPrimary: {
+    backgroundColor: theme.colors.primary + "12",
+  },
+  actionIconInfo: {
+    backgroundColor: theme.colors.info + "15",
+  },
+  actionIconDanger: {
+    backgroundColor: theme.colors.error + "15",
+  },
+  actionTextGroup: {
     flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    marginHorizontal: theme.spacing.xs,
+    gap: 2,
   },
-  statusButton: {
-    backgroundColor: theme.colors.gray100,
+  actionLabel: {
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.textPrimary,
   },
-  statusButtonText: {
-    marginLeft: theme.spacing.xs,
+  actionLabelPrimary: {
     color: theme.colors.primary,
-    fontWeight: theme.typography.fontWeight.medium,
   },
-  editButton: {
-    backgroundColor: theme.colors.info,
+  actionLabelInfo: {
+    color: theme.colors.info,
   },
-  editButtonText: {
-    marginLeft: theme.spacing.xs,
-    color: theme.colors.white,
-    fontWeight: theme.typography.fontWeight.semibold,
+  actionLabelDanger: {
+    color: theme.colors.error,
   },
-  deleteButton: {
-    backgroundColor: theme.colors.error,
-  },
-  deleteButtonText: {
-    marginLeft: theme.spacing.xs,
-    color: theme.colors.white,
-    fontWeight: theme.typography.fontWeight.semibold,
+  actionDescription: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
   },
   modalOverlay: {
     flex: 1,
@@ -460,12 +947,13 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.xl,
     padding: theme.spacing.xl,
     width: "100%",
+    gap: theme.spacing.sm,
   },
   modalTitle: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.typography.fontWeight.bold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   statusOption: {
     flexDirection: "row",
@@ -476,11 +964,18 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
     borderColor: theme.colors.gray200,
-    marginBottom: theme.spacing.sm,
   },
   statusOptionSelected: {
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primary + "15",
+  },
+  statusOptionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: theme.spacing.md,
   },
   statusOptionText: {
     color: theme.colors.textPrimary,
@@ -503,4 +998,3 @@ const styles = StyleSheet.create({
 });
 
 export default EquipmentDetailScreen;
-
