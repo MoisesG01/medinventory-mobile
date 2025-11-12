@@ -268,13 +268,18 @@ const EquipmentDetailScreen = () => {
             try {
               await equipmentApi.remove(equipment.id);
               Alert.alert("Sucesso", "Equipamento excluído com sucesso.");
-              navigation.navigate("MainTabs", {
-                screen: "EquipmentsTab",
-                params: {
-                  refresh: Date.now(),
-                },
+              navigation.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: "MainTabs",
+                    params: {
+                      screen: "EquipmentsTab",
+                      params: { refresh: Date.now() },
+                    },
+                  },
+                ],
               });
-              navigation.goBack();
             } catch (error) {
               console.error("Erro ao excluir equipamento:", error);
               Alert.alert(
@@ -363,60 +368,67 @@ const EquipmentDetailScreen = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient
-          colors={theme.colors.gradients.primary}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[
-            styles.heroGradient,
-            { paddingTop: insets.top + theme.spacing.md },
-          ]}
-        >
-          <View style={styles.heroContentWrapper}>
-            <View style={styles.heroTopRow}>
-              <View style={styles.heroIconWrapper}>
-                <Ionicons
-                  name="medkit-outline"
-                  size={26}
-                  color={theme.colors.white}
-                />
-              </View>
-              <View style={styles.heroTextGroup}>
-                <Text style={styles.heroTitle}>{equipment.nome}</Text>
-                <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.heroActionButton}
-                onPress={() => setStatusModalVisible(true)}
-              >
-                <Ionicons
-                  name="sync-outline"
-                  size={22}
-                  color={theme.colors.white}
-                />
-              </TouchableOpacity>
-            </View>
+        <View style={styles.heroContainer}>
+          <LinearGradient
+            colors={theme.colors.gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroGradient}
+          >
+            <View
+              style={[
+                styles.heroContentWrapper,
+                { paddingTop: theme.spacing.lg + insets.top },
+              ]}
+            >
+              <View style={styles.heroTopRow}>
+                <TouchableOpacity
+                  style={styles.heroBackButton}
+                  onPress={() => navigation.goBack()}
+                >
+                  <Ionicons
+                    name="arrow-back"
+                    size={22}
+                    color={theme.colors.primary}
+                  />
+                </TouchableOpacity>
 
-            <View style={styles.heroHighlights}>
-              <View style={styles.heroHighlight}>
-                <Text style={styles.heroHighlightValue}>
-                  {formatStatus(equipment.statusOperacional)}
-                </Text>
-                <View style={styles.heroHighlightDivider} />
-                <Text style={styles.heroHighlightLabel}>Status atual</Text>
+                <View style={styles.heroTextGroup}>
+                  <Text style={styles.heroTitle}>{equipment.nome}</Text>
+                  <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.heroActionButton}
+                  onPress={() => setStatusModalVisible(true)}
+                >
+                  <Ionicons
+                    name="sync-outline"
+                    size={22}
+                    color={theme.colors.white}
+                  />
+                </TouchableOpacity>
               </View>
-              <View style={styles.heroHighlight}>
-                <Text style={styles.heroHighlightValue}>
-                  {formatDate(equipment.updatedAt)}
-                </Text>
-                <View style={styles.heroHighlightDivider} />
-                <Text style={styles.heroHighlightLabel}>
-                  Última atualização
-                </Text>
+
+              <View style={styles.heroHighlights}>
+                <View style={styles.heroHighlight}>
+                  <Text style={styles.heroHighlightValue}>
+                    {statusInfo.label}
+                  </Text>
+                  <View style={styles.heroHighlightDivider} />
+                  <Text style={styles.heroHighlightLabel}>Status atual</Text>
+                </View>
+                <View style={styles.heroHighlight}>
+                  <Text style={styles.heroHighlightValue}>
+                    {formatDate(equipment.updatedAt)}
+                  </Text>
+                  <View style={styles.heroHighlightDivider} />
+                  <Text style={styles.heroHighlightLabel}>Atualizado</Text>
+                </View>
               </View>
             </View>
-          </View>
-        </LinearGradient>
+          </LinearGradient>
+        </View>
 
         {quickHighlights.length > 0 && (
           <View style={styles.quickInfoGrid}>
@@ -687,9 +699,12 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.xxl,
     gap: theme.spacing.lg,
   },
+  heroContainer: {
+    marginHorizontal: -theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+  },
   heroGradient: {
-    marginHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.lg,
+    width: "100%",
     borderBottomLeftRadius: theme.borderRadius.xxl,
     borderBottomRightRadius: theme.borderRadius.xxl,
     overflow: "hidden",
@@ -705,17 +720,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: theme.spacing.md,
   },
-  heroIconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  heroBackButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.white + "20",
+    backgroundColor: theme.colors.white,
   },
   heroTextGroup: {
     flex: 1,
     gap: theme.spacing.xs,
+  },
+  heroTitle: {
+    fontSize: theme.typography.fontSize.xxl,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.white,
+  },
+  heroSubtitle: {
+    fontSize: theme.typography.fontSize.md,
+    color: "rgba(255,255,255,0.85)",
   },
   heroActionButton: {
     width: 40,
@@ -738,25 +762,27 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.15)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.25)",
   },
   heroHighlightDivider: {
     width: 1,
     height: 16,
-    backgroundColor: "rgba(255,255,255,0.3)",
+    backgroundColor: "rgba(255,255,255,0.35)",
   },
   heroHighlightValue: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.typography.fontWeight.semibold,
     color: theme.colors.white,
     textAlign: "center",
+    minWidth: 40,
   },
   heroHighlightLabel: {
     fontSize: theme.typography.fontSize.sm,
     color: "rgba(255,255,255,0.85)",
     textAlign: "center",
+    flexShrink: 1,
   },
   quickInfoGrid: {
     flexDirection: "row",
