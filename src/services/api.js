@@ -177,6 +177,54 @@ export const authApi = {
     }),
 };
 
+const buildQueryString = (params = {}) => {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (
+      value !== undefined &&
+      value !== null &&
+      value !== "" &&
+      !(typeof value === "number" && Number.isNaN(value))
+    ) {
+      searchParams.append(key, value);
+    }
+  });
+
+  const query = searchParams.toString();
+  return query ? `?${query}` : "";
+};
+
+export const equipmentApi = {
+  list: (params = {}) =>
+    apiFetch(`/equipamentos${buildQueryString(params)}`, {
+      method: "GET",
+    }),
+  create: (payload) =>
+    apiFetch("/equipamentos", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getById: (id) =>
+    apiFetch(`/equipamentos/${id}`, {
+      method: "GET",
+    }),
+  update: (id, payload) =>
+    apiFetch(`/equipamentos/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  updateStatus: (id, payload) =>
+    apiFetch(`/equipamentos/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  remove: (id) =>
+    apiFetch(`/equipamentos/${id}`, {
+      method: "DELETE",
+    }),
+};
+
 export const protectedApiGet = (path) =>
   apiFetch(path, {
     method: "GET",

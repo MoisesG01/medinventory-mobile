@@ -66,28 +66,35 @@ const DashboardScreen = () => {
   const quickActions = [
     {
       title: "Buscar Ativo",
+      subtitle: "Localize equipamentos rapidamente",
       icon: "search-outline",
-      color: theme.colors.primary,
+      color: theme.colors.white,
+      gradient: theme.colors.gradients.ocean,
       onPress: () => navigation.navigate("Search"),
     },
     {
       title: "Relatórios",
+      subtitle: "Acompanhe indicadores atualizados",
       icon: "bar-chart-outline",
-      color: theme.colors.secondary,
+      color: theme.colors.white,
+      gradient: theme.colors.gradients.secondary,
       onPress: () => navigation.navigate("Reports"),
     },
     {
       title: "Notificações",
+      subtitle: "Veja alertas e avisos recentes",
       icon: "notifications-outline",
-      color: theme.colors.info,
+      color: theme.colors.white,
+      gradient: theme.colors.gradients.warning,
       onPress: () => navigation.navigate("Notifications"),
     },
     {
-      title: "Adicionar Ativo",
-      icon: "add-circle-outline",
-      color: theme.colors.success,
-      onPress: () =>
-        Alert.alert("Adicionar Ativo", "Funcionalidade em desenvolvimento"),
+      title: "Equipamentos",
+      subtitle: "Gerencie o inventário completo",
+      icon: "medkit-outline",
+      color: theme.colors.white,
+      gradient: theme.colors.gradients.primary,
+      onPress: () => navigation.navigate("EquipmentsTab"),
     },
   ];
 
@@ -249,21 +256,37 @@ const DashboardScreen = () => {
   );
 
   const QuickActionCard = ({ item }) => (
-    <TouchableOpacity style={styles.actionCard} onPress={item.onPress}>
+    <TouchableOpacity
+      style={styles.actionCard}
+      onPress={item.onPress}
+      activeOpacity={0.85}
+    >
       <LinearGradient
-        colors={[item.color + "10", item.color + "05"]}
+        colors={item.gradient ?? theme.colors.gradients.primary}
         style={styles.actionGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <View
-          style={[styles.actionIcon, { backgroundColor: item.color + "20" }]}
-        >
-          <Ionicons name={item.icon} size={24} color={item.color} />
+        <View style={styles.actionIconWrapper}>
+          <View style={styles.actionIcon}>
+            <Ionicons name={item.icon} size={22} color={item.color} />
+          </View>
         </View>
-        <Text style={styles.actionTitle}>{item.title}</Text>
-        <View style={styles.actionArrow}>
-          <Ionicons name="arrow-forward" size={16} color={item.color} />
+        <View style={styles.actionText}>
+          <Text
+            style={styles.actionTitle}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {item.title}
+          </Text>
+          <Text
+            style={styles.actionSubtitle}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {item.subtitle}
+          </Text>
         </View>
       </LinearGradient>
     </TouchableOpacity>
@@ -721,34 +744,47 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     width: (width - theme.spacing.lg * 2 - theme.spacing.md) / 2,
-    borderRadius: theme.borderRadius.xl,
+    borderRadius: theme.borderRadius.xxl,
     marginBottom: theme.spacing.md,
     overflow: "hidden",
     ...theme.shadows.lg,
   },
   actionGradient: {
-    padding: theme.spacing.lg,
+    flexDirection: "row",
     alignItems: "center",
-    position: "relative",
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.md,
+  },
+  actionIconWrapper: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   actionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(255,255,255,0.25)",
     alignItems: "center",
-    marginBottom: theme.spacing.sm,
+    justifyContent: "center",
   },
-  actionArrow: {
-    position: "absolute",
-    top: theme.spacing.md,
-    right: theme.spacing.md,
+  actionText: {
+    flex: 1,
   },
   actionTitle: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.white,
+    fontWeight: theme.typography.fontWeight.semibold,
+    marginBottom: 4,
+  },
+  actionSubtitle: {
     fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textPrimary,
-    fontWeight: theme.typography.fontWeight.medium,
-    textAlign: "center",
+    color: "rgba(255,255,255,0.85)",
+    lineHeight: 18,
   },
   activitiesContainer: {
     paddingHorizontal: theme.spacing.lg,
